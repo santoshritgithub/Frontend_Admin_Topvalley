@@ -21,6 +21,8 @@ export default function MemberForm({
   const [pricing, setPricing] = useState<Pricing | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [grace, setGrace] = useState<string>(member?.graceDays ? String(member.graceDays) : "");
+  const [paid, setPaid] = useState<string>(member?.amountPaid ? String(member.amountPaid) : "");
 
   useEffect(() => {
     api<Pricing>("/pricing").then(setPricing).catch((e) => setError(e.message));
@@ -30,6 +32,7 @@ export default function MemberForm({
   const feeFor = (p: number) =>
     member && member.vehicle === vehicle && member.planDays === p ? member.amount : pricing?.[vehicle][`d${p}` as "d7"] ?? 0;
   const planFee = feeFor(plan);
+  const balance = Math.max(0, planFee - (Number(paid) || 0));
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -44,6 +47,7 @@ export default function MemberForm({
       planDays: plan,
       amount: planFee,
       amountPaid: Number(f.get("amountPaid")) || 0,
+      graceDays: balance > 0 ? Number(grace) || 0 : 0,
     };
     setBusy(true);
     setError("");
@@ -84,6 +88,14 @@ export default function MemberForm({
             <label htmlFor="startDate">Start date *</label>
             <input id="startDate" name="startDate" type="date" required defaultValue={member?.startDate ?? today()} />
           </div>
+          <div>
+            <label htmlFor="amountPaid">Amount paid</label>
+            <input id="amountPaid" name="amountPaid" type="number" min={0} step="any" inputMode="decimal" placeholder="0" value={paid} onChange={(e) => setPaid(e.target.value)} />
+          </div>
+          <div>
+            <label>Plan fee</label>
+            <input readOnly value={planFee ? money(planFee) : "—"} tabIndex={-1} />
+          </div>
           <div className="full">
             <label>Plan and fee *</label>
             <div className="plans">
@@ -105,14 +117,12 @@ export default function MemberForm({
             </div>
             {pricing && !planFee && <div className="hint">No fee set for this plan yet. <Link href="/pricing">Set it on the Pricing page</Link>.</div>}
           </div>
-          <div>
-            <label htmlFor="amountPaid">Amount paid</label>
-            <input id="amountPaid" name="amountPaid" type="number" min={0} step="any" inputMode="decimal" defaultValue={member?.amountPaid ?? 0} />
-          </div>
-          <div>
-            <label>Plan fee</label>
-            <input readOnly value={planFee ? money(planFee) : "—"} tabIndex={-1} />
-          </div>
+          {balance > 0 && (
+            <div>
+              <label htmlFor="graceDays">Days allowed to pay remaining {money(balance)} *</label>
+              <input id="graceDays" name="graceDays" type="number" required min={1} max={plan} placeholder="e.g. 3" value={grace} onChange={(e) => setGrace(e.target.value)} />
+            </div>
+          )}
           <div>
             <label htmlFor="address">Address</label>
             <input id="address" name="address" maxLength={200} defaultValue={member?.address} />

@@ -2,8 +2,10 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { addDays, api, money, prettyDate, today, weekday, type Member } from "@/lib/api";
+import { api, money, prettyDate, today, type Member } from "@/lib/api";
 import MemberForm from "@/components/MemberForm";
+import AlertModal from "@/components/AlertModal";
+import Timers, { rideState, useNow } from "@/components/Timers";
 
 export default function MemberDetail() {
   const { id } = useParams<{ id: string }>();
@@ -11,23 +13,32 @@ export default function MemberDetail() {
   const [m, setM] = useState<Member | null>(null);
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState("");
-
+  const [popup, setPopup] = useState("");
+  // Payment-block messages open as a pop-up; everything else stays inline.
+  const fail = (e: any) => (/^Allowed \d+ days/.test(e.message) ? setPopup(e.message) : setError(e.message));
+  const now = useNow();
   const load = useCallback(() => {
     api<Member>(`/members/${id}`).then(setM).catch((e) => setError(e.message));
   }, [id]);
   useEffect(load, [load]);
 
-  async function mark(date: string, status: "present" | "absent" | "clear") {
+  async function mark(i: number, status: "present" | "absent" | "clear") {
     setError("");
     try {
-      await api(`/members/${id}/attendance`, { method: "PUT", body: { date, status } });
-      setM((cur) => {
-        if (!cur) return cur;
-        const rest = (cur.attendance || []).filter((a) => a.date !== date);
-        return { ...cur, attendance: status === "clear" ? rest : [...rest, { date, status }] };
-      });
+      await api(`/members/${id}/slots/${i}`, { method: "PUT", body: { status } });
+      load();
     } catch (e: any) {
-      setError(e.message);
+      fail(e);
+    }
+  }
+
+  async function timer(i: number, action: "pause" | "resume") {
+    setError("");
+    try {
+      await api(`/members/${id}/slots/${i}/timer`, { method: "PUT", body: { action } });
+      load();
+    } catch (e: any) {
+      fail(e);
     }
   }
 
@@ -44,13 +55,13 @@ export default function MemberDetail() {
   if (error && !m) return <div className="error">{error}</div>;
   if (!m) return <div className="empty">Loading…</div>;
 
-  const marks = new Map((m.attendance || []).map((a) => [a.date, a.status]));
-  const days = Array.from({ length: m.planDays }, (_, i) => addDays(m.startDate, i));
-  const present = [...marks.values()].filter((s) => s === "present").length;
-  const absent = [...marks.values()].filter((s) => s === "absent").length;
   const t = today();
-  const elapsed = days.filter((d) => d <= t).length;
-  const remaining = Math.max(0, m.planDays - elapsed);
+  const slot = (i: number) => (m.slots || []).find((x) => x.i === i);
+  const present = (m.slots || []).filter((x) => x.status === "present").length;
+  const absent = (m.slots || []).filter((x) => x.status === "absent").length;
+  // A box is used up when its 30-min ride finishes, or when it is marked absent.
+  const used = (m.slots || []).filter((x) => x.status === "absent" || (x.startedAt && rideState(x as any, now).kind === "done")).length;
+  const remaining = Math.max(0, m.planDays - used);
 
   return (
     <>
@@ -77,8 +88,10 @@ export default function MemberDetail() {
           ))}
         </div>
         <div className="sub">
-          {prettyDate(m.startDate)} → {prettyDate(m.endDate)}
+          Started {prettyDate(m.startDate)}
           {t < m.startDate ? " · starts soon" : remaining === 0 ? " · plan completed" : ` · ${remaining} day${remaining === 1 ? "" : "s"} left`}
+          {" "}· {used} of {m.planDays} days used (each finished 30-min ride or absent = 1 day)
+          {m.graceDays && m.due > 0 ? <> · {m.due.toLocaleString()} unpaid: pay within {m.graceDays} day{m.graceDays === 1 ? "" : "s"}</> : null}
         </div>
         <div className="progress"><div style={{ width: `${(present / m.planDays) * 100}%` }} /></div>
         <div className="sub"><b style={{ color: "var(--green)" }}>{present} present</b> · <b style={{ color: "var(--red)" }}>{absent} absent</b> · {m.planDays - present - absent} unmarked</div>
@@ -91,20 +104,33 @@ export default function MemberDetail() {
       </div>
 
       <div className="card">
-        <h3 style={{ marginBottom: 14 }}>Attendance</h3>
-        <div className="days">
-          {days.map((d, i) => {
-            const s = marks.get(d);
-            const future = d > t;
+        <h3 style={{ marginBottom: 14 }}>Attendance · {m.planDays} days</h3>
+        <div className="days boxes">
+          {Array.from({ length: m.planDays }, (_, i) => {
+            const x = slot(i);
+            const locked = x?.status === "present" && !!x.startedAt && rideState(x as any, now).kind === "done"; // finished rides cannot be edited
             return (
-              <div key={d} className={`day ${s || ""} ${d === t ? "today" : ""} ${future ? "future" : ""}`}>
-                <div>
-                  <div className="n">Day {i + 1} · {weekday(d)}</div>
-                  <div className="d">{prettyDate(d).replace(/,? \d{4}$/, "")}</div>
-                </div>
+              <div key={i} className={`day ${x?.status || ""}`}>
+                <div className="n">Day {i + 1}</div>
                 <div className="marks">
-                  <button className={`p ${s === "present" ? "on" : ""}`} title={future ? "Cannot mark a future date" : "Present"} disabled={future} onClick={() => mark(d, s === "present" ? "clear" : "present")}>P</button>
-                  <button className={`a ${s === "absent" ? "on" : ""}`} title={future ? "Cannot mark a future date" : "Absent"} disabled={future} onClick={() => mark(d, s === "absent" ? "clear" : "absent")}>A</button>
+                  <button disabled={locked} title={locked ? "Finished - locked" : undefined} className={`p ${x?.status === "present" ? "on" : ""}`} onClick={() => mark(i, x?.status === "present" ? "clear" : "present")}>Present</button>
+                  <button disabled={locked} title={locked ? "Finished - locked" : undefined} className={`a ${x?.status === "absent" ? "on" : ""}`} onClick={() => mark(i, x?.status === "absent" ? "clear" : "absent")}>Absent</button>
+                </div>
+                <div className="slot-state">
+                  {x?.status === "present" && x.startedAt ? (
+                    <>
+                      <div className="slot-date">{new Date(x.startedAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}</div>
+                      <Timers sessions={[{ startedAt: x.startedAt, endsAt: x.endsAt ?? "", pausedLeft: x.pausedLeft ?? null }]} />
+                      {(() => {
+                        const k = rideState(x as any, now).kind;
+                        return k === "running" ? (
+                          <button className="btn sm ghost" onClick={() => timer(i, "pause")}>Pause</button>
+                        ) : k === "paused" ? (
+                          <button className="btn sm" onClick={() => timer(i, "resume")}>Resume</button>
+                        ) : null;
+                      })()}
+                    </>
+                  ) : x?.status === "present" ? null : x?.status === "absent" ? <span className="sub">Absent</span> : <span className="sub">Not marked</span>}
                 </div>
               </div>
             );
@@ -112,6 +138,7 @@ export default function MemberDetail() {
         </div>
       </div>
 
+      {popup && <AlertModal message={popup} onClose={() => setPopup("")} />}
       {editing && (
         <MemberForm
           member={m}

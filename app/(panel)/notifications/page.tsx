@@ -32,23 +32,37 @@ export default function NotificationsPage() {
       <div className="page-head">
         <div>
           <h1>Notifications</h1>
-          <p className="sub">Every day at 5 PM we check who has no attendance marked. Marking them clears the alert.</p>
+          <p className="sub">Every day at 5 PM we check who has no attendance marked and whose allowed credit days are used up with money still unpaid. Marking attendance or recording the payment clears the alert.</p>
         </div>
         <button className="btn ghost" onClick={markAll} disabled={!unread}>Mark all as read</button>
       </div>
       {error && <div className="error">{error}</div>}
-      {items && items.length === 0 && <div className="card empty">All caught up. No missed attendance.</div>}
+      {items && items.length === 0 && <div className="card empty">All caught up. No alerts.</div>}
       <div className="grid">
         {items?.map((n) => (
           <div key={n._id} className={`card notif ${n.read ? "" : "unread"}`}>
-            <div>
-              <b>{n.memberName}</b>: attendance not marked
-              <div className="sub" style={{ marginTop: 2 }}>{prettyDate(n.date)}</div>
-            </div>
-            <div className="row">
-              <Link href={`/attendance?date=${n.date}`} className="btn sm" onClick={() => markOne(n._id)}>Mark attendance</Link>
-              <Link href={`/members/${n.member}`} className="btn ghost sm" onClick={() => markOne(n._id)}>View member</Link>
-            </div>
+            {n.type === "payment_overdue" ? (
+              <>
+                <div>
+                  <b>{n.memberName}</b>: payment overdue
+                  <div className="sub" style={{ marginTop: 2 }}>{n.message}</div>
+                </div>
+                <div className="row">
+                  <Link href={`/members/${n.member}`} className="btn sm" onClick={() => markOne(n._id)}>View member</Link>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <b>{n.memberName}</b>: attendance not marked
+                  <div className="sub" style={{ marginTop: 2 }}>{prettyDate(n.date)}</div>
+                </div>
+                <div className="row">
+                  <Link href={`/attendance?date=${n.date}`} className="btn sm" onClick={() => markOne(n._id)}>Mark attendance</Link>
+                  <Link href={`/members/${n.member}`} className="btn ghost sm" onClick={() => markOne(n._id)}>View member</Link>
+                </div>
+              </>
+            )}
           </div>
         ))}
       </div>

@@ -41,6 +41,8 @@ export const weekday = (s: string) => {
   return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: "short" });
 };
 
+export type Ride = { startedAt: string; endsAt: string; pausedLeft: number | null };
+
 export type Member = {
   _id: string;
   name: string;
@@ -50,13 +52,17 @@ export type Member = {
   planDays: 7 | 15 | 30;
   amount: number;
   amountPaid: number;
+  graceDays?: number;
   due: number;
   startDate: string;
   endDate: string;
   notes: string;
   status?: "upcoming" | "active" | "completed";
   presentCount?: number;
-  attendance?: { date: string; status: "present" | "absent" }[];
+  todaySessions?: Ride[];
+  daysUsed?: number;
+  slots?: { i: number; status: "present" | "absent"; startedAt?: string; endsAt?: string; pausedLeft?: number | null }[];
+  attendance?: { date: string; status: "present" | "absent"; sessions?: Ride[] }[];
 };
 
 export type Review = {
@@ -76,6 +82,7 @@ export type Pricing = Record<(typeof VEHICLES)[number], Record<(typeof PLAN_KEYS
 
 export type AppNotification = {
   _id: string;
+  type?: "missed_attendance" | "payment_overdue";
   member: string;
   memberName: string;
   date: string;

@@ -105,6 +105,8 @@ tr.click:hover td { background: #f8f9fd; }
 .day .d { font-weight: 800; color: var(--ink); }
 .day.present { background: #f0fdf4; border-color: #86efac; }
 .day.absent { background: #fef2f2; border-color: #fca5a5; }
+.day { font: inherit; cursor: pointer; }
+.day.picked { box-shadow: 0 0 0 2px var(--ink); }
 .day.today { outline: 2px solid var(--primary); }
 .day .marks { display: flex; gap: 6px; }
 .day .marks button { flex: 1; padding: 5px 0; border-radius: 8px; border: 1px solid var(--line); background: #fff; font-weight: 800; cursor: pointer; }
@@ -157,3 +159,55 @@ tr.click:hover td { background: #f8f9fd; }
 .notif { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .notif.unread { border-left: 4px solid var(--amber); background: #fffbeb; }
 .notif .row { display: flex; gap: 8px; }
+
+.day-detail { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.sessions { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.session { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border: 1px solid #86efac; background: #f0fdf4; border-radius: 10px; }
+.session b { font-variant-numeric: tabular-nums; font-size: 18px; }
+.session.done { border-color: var(--line); background: var(--bg); color: var(--muted); }
+
+.days.boxes { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.slot-state { min-height: 34px; display: flex; flex-direction: column; gap: 6px; justify-content: center; align-items: center; }
+.timer.paused { border-color: #93c5fd; background: #eff6ff; }
+.timers { display: flex; flex-wrap: wrap; gap: 6px; }
+.timer { padding: 4px 10px; border-radius: 999px; border: 1px solid #86efac; background: #f0fdf4; font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.timer.done { border-color: var(--line); background: var(--bg); color: var(--muted); }
+.session-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+
+/* Register/edit form: three columns, compact, fits one screen without scrolling */
+.modal.wide { max-width: 920px; padding: 20px 28px; }
+.modal.wide h2 { margin-bottom: 12px; font-size: 22px; }
+.modal.wide .form-grid { grid-template-columns: repeat(3, 1fr); gap: 10px 16px; }
+.modal.wide label { margin-bottom: 3px; font-size: 13px; }
+.modal.wide input, .modal.wide select { padding: 8px 12px; font-size: 15px; }
+.modal.wide .plans { gap: 10px; }
+.modal.wide .plan { padding: 8px 14px; }
+.modal.wide .plan b { font-size: 24px; }
+.modal.wide .actions { margin-top: 14px; }
+.modal.wide .actions .btn { padding: 9px 22px; font-size: 15px; }
+.modal.wide .hint { margin-top: 4px; }
+@media (max-width: 860px) { .modal.wide .form-grid { grid-template-columns: 1fr; } }
+
+/* Taller register form (still fits one screen) */
+.modal.wide { padding: 30px 34px; }
+.modal.wide h2 { margin-bottom: 20px; font-size: 24px; }
+.modal.wide .form-grid { gap: 18px 20px; }
+.modal.wide label { margin-bottom: 6px; font-size: 14px; }
+.modal.wide input, .modal.wide select { padding: 12px 14px; font-size: 16px; }
+.modal.wide .plan { padding: 14px 16px; }
+.modal.wide .plan b { font-size: 30px; }
+.modal.wide .actions { margin-top: 24px; }
+.modal.wide .actions .btn { padding: 12px 26px; font-size: 16px; }
+.timer.queued { border-color: #fcd34d; background: #fffbeb; }
+.slot-date { font-weight: 800; color: var(--ink); font-size: 14px; }
+
+td.nw, th { white-space: nowrap; }
+.pill { white-space: nowrap; }
+.timer-sum { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.timer.running { border-color: #86efac; background: #f0fdf4; }
+.alert-modal { max-width: 420px; text-align: center; padding: 30px 28px; }
+.alert-modal .alert-icon { width: 54px; height: 54px; border-radius: 50%; background: #fee2e2; color: var(--red); font-size: 30px; font-weight: 800; display: grid; place-items: center; margin: 0 auto 14px; }
+.alert-modal p { color: var(--ink-2); margin: 0; font-size: 16px; line-height: 1.5; }
+.timer.clickable { cursor: pointer; font: inherit; font-size: 13px; }
+.timer.clickable:hover { filter: brightness(.95); box-shadow: 0 0 0 2px rgba(34, 197, 94, .25); }
+.timer.paused.clickable:hover { box-shadow: 0 0 0 2px rgba(59, 130, 246, .3); }
